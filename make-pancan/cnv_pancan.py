@@ -8,7 +8,7 @@ on 2017-4-1.
 
 Given a set of CNV input files for  each cancer type, make a pancan file, including stouffers
 
-Copyright (c) 2017 . All rights reserved.
+Copyright (c) 2018. All rights reserved.
 '''
 
 import pandas as pd
@@ -24,16 +24,21 @@ import analysis
 CANCER_TYPES = ['BLCA', 'BRCA', 'COADREAD', 'GBMLGG', 'HNSC', 'KIPAN', 'LIHC', 'LUAD',
                 'LUSC', 'OV', 'PAAD', 'PRAD', 'SARC', 'SKCM', 'STES', 'UCEC']
 
+TCGA_ADDITIONAL_CANCER_TYPES = ['ACC', 'CESC', 'CHOL', 'MESO', 'PCPG',
+                                'TGCT', 'THCA', 'UCS', 'UVM']
+
+
 def get_options(argv):
   try:
-    opts, args = getopt.getopt(argv[1:], 'hs:i:o:',
-    ['help', 'outdir=', 'suffix=', 'indir'])
+    opts, args = getopt.getopt(argv[1:], 'hs:i:o:t',
+                        ['help', 'outdir=', 'suffix=', 'indir', 'tcga_additional='])
   except getopt.error, msg:
-    usage()
+    print msg
 
   suffix = None
   indir = None
   outdir = '.'
+  tcga_additional = False
 
   for option, value in opts:
     if option in ('-o', '--outdir'):
@@ -44,8 +49,10 @@ def get_options(argv):
       indir = value
     if option in ('-s', '--suffix'):
       suffix = value
+    if option in ('-t', '--tcga_additional'):
+      tcga_additional = True
 
-  return outdir, indir, suffix
+  return outdir, indir, suffix, tcga_additional
 
 def make_path(indir, cancer, suffix):
   if os.path.isdir(os.path.join(indir, cancer)):
@@ -53,9 +60,15 @@ def make_path(indir, cancer, suffix):
   else:
     return os.path.join(indir, cancer + suffix)
 
-def make_pancan_df(outdir, indir, suffix):
+def make_pancan_df(outdir, indir, suffix, tcga_additional=False):
   pancan = {}
-  for cancer in CANCER_TYPES:
+
+  cancer_types = CANCER_TYPES
+  if tcga_additional:
+    cancer_types =  TCGA_ADDITIONAL_CANCER_TYPES
+
+  print cancer_types
+  for cancer in cancer_types:
     make_path(indir, cancer, suffix)
     path = make_path(indir, cancer, suffix)
     df = pd.read_csv(path, index_col=0, na_values=[' NA']) # sometimes rpy2 gives back this monstrosity of a NaN value.
@@ -72,13 +85,14 @@ def make_pancan_df(outdir, indir, suffix):
   pancan['Location'] = df['Location']
   pancan_df = pd.DataFrame(pancan)
   outpath = os.path.join(outdir, 'pancan.csv')
+  print outpath
   pancan_df.to_csv(outpath, index_label='gene')
 
 def main(argv=None):
   if argv is None:
     argv = sys.argv
-    outdir, indir, suffix = get_options(argv)
-    make_pancan_df(outdir, indir, suffix)
+    outdir, indir, suffix, tcga_additional = get_options(argv)
+    make_pancan_df(outdir, indir, suffix, tcga_additional)
 
 if __name__ == "__main__":
   main()

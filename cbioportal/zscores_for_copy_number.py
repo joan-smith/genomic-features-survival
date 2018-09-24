@@ -9,7 +9,7 @@ on 2017-3-18.
 
 Given a CBioportal clinical file and a cnv for genes file, calculate zscores for all genes.
 
-Copyright (c) 2017 . All rights reserved.
+Copyright (c) 2018. All rights reserved.
 '''
 
 import pandas as pd
@@ -18,14 +18,16 @@ import argparse
 import sys
 import os
 import glob
+import re
 
 sys.path.append('../common/')
 import utilities as util
 import analysis
 
+COPY_NUMBER_PERCENT = 0.02 #unused
 
 def get_options():
-  parser = argparse.ArgumentParser(description='Get permutation and thread counts')
+  parser = argparse.ArgumentParser(description='Copy numer for cbioportal data')
   parser.add_argument('-i', action='store', dest='input_directory')
   parser.add_argument('-c', action='store', dest='clinical_directory')
   parser.add_argument('-o', action='store', dest='output_directory', default='.')
@@ -48,6 +50,7 @@ def make_zscores(copy_number, clinical, outdir):
   df_by_patient = df.transpose()
   df_by_patient.columns = df_by_patient.loc['Hugo_Symbol']
   clinical_and_cnv = df_by_patient.join(relevant_clinical, how='inner')
+  num_patients = clinical_and_cnv.shape[0]
 
   cancer_type = util.get_cancer_type(copy_number)
   outfile = os.path.join(outdir, cancer_type + '.cbioportal_zscores.csv')
@@ -58,6 +61,8 @@ def make_zscores(copy_number, clinical, outdir):
     for gene in clinical_and_cnv:
       if gene not in ('Time', 'Censor'): # skip metadata
         if clinical_and_cnv[gene].count() > 10:
+
+          num_with_copy_number = (clinical_and_cnv[gene] != 0).sum()
           cox_dict = analysis.do_cox(clinical_and_cnv.Time,
                                      clinical_and_cnv.Censor,
                                      clinical_and_cnv[gene],
@@ -67,7 +72,7 @@ def make_zscores(copy_number, clinical, outdir):
           out.write(formatstring.format(gene, cox_dict['z'], cox_dict['p'], cox_dict['n']))
 
 def get_cbioportal_cancer_type(filename):
-  return os.path.basename(filename).split('_')[0]
+  return re.split('_CNV\.', filename)[0]
 
 def main(argv=None):
   if argv is None:
@@ -78,6 +83,7 @@ def main(argv=None):
     cnv_files = util.remove_extraneous_files(cnv_files)
     for cnv in cnv_files:
       cancer_type = get_cbioportal_cancer_type(cnv)
+      print cancer_type
       clinical_file = glob.glob(os.path.join(clinical_directory, '*' + cancer_type + '*'))[0]
 
       outglob = glob.glob(os.path.join(outdir, cancer_type + '*'))

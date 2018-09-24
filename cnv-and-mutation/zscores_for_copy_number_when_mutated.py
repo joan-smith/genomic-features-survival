@@ -11,7 +11,7 @@ on 2017-7-7.
 Given a set of cnv files, mutation files and clinical files, all from TCGA
 calculate cnv zscores partitioned by whether or not the gene in question is mutated
 
-Copyright (c) 2017 . All rights reserved.
+Copyright (c) 2017. All rights reserved.
 
 '''
 
@@ -29,7 +29,6 @@ from multiprocessing import Pool
 sys.path.append('../common/')
 import utilities as util
 import analysis
-import metagene as metagene_lib
 
 sys.path.append('../mutation-analysis')
 import zscores_for_mutants as mutation_zscores
